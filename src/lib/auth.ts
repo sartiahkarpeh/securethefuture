@@ -3,7 +3,20 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocById, COLLECTIONS } from './firestore-helpers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Get JWT secret from environment
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate JWT secret exists and is strong enough
+function validateJWTSecret(): string {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required. Please set it in your .env file.');
+  }
+  if (JWT_SECRET.length < 32) {
+    console.warn('WARNING: JWT_SECRET should be at least 32 characters long for security.');
+  }
+  return JWT_SECRET;
+}
+
 const TOKEN_NAME = 'auth-token';
 
 export interface JWTPayload {
@@ -16,7 +29,8 @@ export interface JWTPayload {
  * Generate JWT token for a user
  */
 export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  const secret = validateJWTSecret();
+  return jwt.sign(payload, secret, {
     expiresIn: '7d', // Token expires in 7 days
   });
 }
@@ -26,7 +40,8 @@ export function generateToken(payload: JWTPayload): string {
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const secret = validateJWTSecret();
+    return jwt.verify(token, secret) as JWTPayload;
   } catch (error) {
     return null;
   }

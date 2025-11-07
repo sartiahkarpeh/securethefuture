@@ -19,6 +19,16 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'EDITOR');
     }
     
+    // Rate limiting helper - check if write happened recently
+    function rateLimit(interval) {
+      return request.time > resource.data.lastModified + duration.value(interval, 's');
+    }
+    
+    // Validate email format
+    function isValidEmail(email) {
+      return email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+    
     // Users collection - only admins can read/write
     match /users/{userId} {
       allow read: if isAdmin();
@@ -28,45 +38,82 @@ service cloud.firestore {
     // Resources collection
     match /resources/{resourceId} {
       allow read: if resource.data.published == true || isEditor();
-      allow create, update, delete: if isEditor();
+      allow create: if isEditor() 
+        && request.resource.data.keys().hasAll(['title', 'slug', 'description', 'type', 'published'])
+        && request.resource.data.title is string 
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200;
+      allow update: if isEditor();
+      allow delete: if isEditor();
     }
     
     // News articles collection
     match /news_articles/{articleId} {
       allow read: if resource.data.published == true || isEditor();
-      allow create, update, delete: if isEditor();
+      allow create: if isEditor()
+        && request.resource.data.keys().hasAll(['title', 'slug', 'excerpt', 'content', 'published'])
+        && request.resource.data.title is string 
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200;
+      allow update: if isEditor();
+      allow delete: if isEditor();
     }
     
     // Stories collection
     match /stories/{storyId} {
       allow read: if resource.data.published == true || isEditor();
-      allow create, update, delete: if isEditor();
+      allow create: if isEditor()
+        && request.resource.data.keys().hasAll(['title', 'slug', 'content', 'published'])
+        && request.resource.data.title is string 
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200;
+      allow update: if isEditor();
+      allow delete: if isEditor();
     }
     
     // Events collection
     match /events/{eventId} {
       allow read: if resource.data.published == true || isEditor();
-      allow create, update, delete: if isEditor();
+      allow create: if isEditor()
+        && request.resource.data.keys().hasAll(['title', 'slug', 'description', 'type', 'date', 'published'])
+        && request.resource.data.title is string 
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200;
+      allow update: if isEditor();
+      allow delete: if isEditor();
     }
     
-    // Contact messages - anyone can create, only admins can read
+    // Contact messages - rate limited creation
     match /contact_messages/{messageId} {
       allow read: if isAdmin();
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasAll(['name', 'email', 'message'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && isValidEmail(request.resource.data.email)
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 5000;
       allow update, delete: if isAdmin();
     }
     
-    // Newsletter subscribers - anyone can create, only admins can read
+    // Newsletter subscribers - rate limited, validated email
     match /newsletter_subscribers/{subscriberId} {
       allow read: if isAdmin();
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasAll(['email'])
+        && isValidEmail(request.resource.data.email);
       allow update, delete: if isAdmin();
     }
     
     // Tags collection
     match /tags/{tagId} {
       allow read: if true;
-      allow write: if isEditor();
+      allow create: if isEditor()
+        && request.resource.data.keys().hasAll(['name', 'slug'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 50;
+      allow update, delete: if isEditor();
     }
     
     // Media items
@@ -75,10 +122,14 @@ service cloud.firestore {
       allow write: if isEditor();
     }
     
-    // RSVPs for events
+    // RSVPs for events - validate data
     match /rsvps/{rsvpId} {
       allow read: if isAdmin();
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasAll(['eventId', 'name', 'email'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && isValidEmail(request.resource.data.email);
       allow update, delete: if isAdmin();
     }
   }

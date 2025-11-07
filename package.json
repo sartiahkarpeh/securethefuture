@@ -13,7 +13,7 @@
     "seed:news": "node scripts/seed-news.js"
   },
   "dependencies": {
-    "@ckeditor/ckeditor5-build-classic": "^41.4.2",
+    "@ckeditor/ckeditor5-build-classic": "^44.3.0",
     "@ckeditor/ckeditor5-react": "^11.0.0",
     "@prisma/client": "^6.17.1",
     "@stripe/stripe-js": "^8.2.0",
@@ -31,7 +31,7 @@
     "framer-motion": "^11.3.24",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.428.0",
-    "next": "14.2.5",
+    "next": "^14.2.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-intersection-observer": "^9.13.0",

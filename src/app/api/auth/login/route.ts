@@ -9,11 +9,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password } = body;
 
-    console.log('🔐 Login attempt:', { email, passwordLength: password?.length });
-
     // Validate input
     if (!email || !password) {
-      console.log('❌ Missing email or password');
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -21,7 +18,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    console.log('🔍 Looking for user with email:', email.toLowerCase());
     const user = await getDocByField(
       COLLECTIONS.USERS,
       'email',
@@ -29,23 +25,16 @@ export async function POST(request: NextRequest) {
     );
 
     if (!user) {
-      console.log('❌ User not found');
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
 
-    console.log('✅ User found:', { id: user.id, email: user.email, hasPassword: !!user.password });
-
     // Verify password
-    console.log('🔑 Comparing passwords...');
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    console.log('🔑 Password valid:', isPasswordValid);
-
     if (!isPasswordValid) {
-      console.log('❌ Invalid password');
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
