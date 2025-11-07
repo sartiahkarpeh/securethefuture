@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    
+    function isEditor() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'EDITOR');
+    }
+    
+    // Users collection - only admins can read/write
+    match /users/{userId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Resources collection
+    match /resources/{resourceId} {
+      allow read: if resource.data.published == true || isEditor();
+      allow create, update, delete: if isEditor();
+    }
+    
+    // News articles collection
+    match /news_articles/{articleId} {
+      allow read: if resource.data.published == true || isEditor();
+      allow create, update, delete: if isEditor();
+    }
+    
+    // Stories collection
+    match /stories/{storyId} {
+      allow read: if resource.data.published == true || isEditor();
+      allow create, update, delete: if isEditor();
+    }
+    
+    // Events collection
+    match /events/{eventId} {
+      allow read: if resource.data.published == true || isEditor();
+      allow create, update, delete: if isEditor();
+    }
+    
+    // Contact messages - anyone can create, only admins can read
+    match /contact_messages/{messageId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+    
+    // Newsletter subscribers - anyone can create, only admins can read
+    match /newsletter_subscribers/{subscriberId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+    
+    // Tags collection
+    match /tags/{tagId} {
+      allow read: if true;
+      allow write: if isEditor();
+    }
+    
+    // Media items
+    match /media_items/{mediaId} {
+      allow read: if true;
+      allow write: if isEditor();
+    }
+    
+    // RSVPs for events
+    match /rsvps/{rsvpId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

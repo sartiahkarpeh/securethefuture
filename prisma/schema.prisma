@@ -1,0 +1,311 @@
+// Secure the Future - Database Schema
+// This schema defines all data models for the application
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and admin access
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String   // Hashed password
+  role      Role     @default(VIEWER)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // Relations
+  createdStories      Story[]       @relation("StoryAuthor")
+  createdNews         NewsArticle[] @relation("NewsAuthor")
+  createdEvents       Event[]       @relation("EventOrganizer")
+  createdResources    Resource[]    @relation("ResourceCreator")
+  uploadedMedia       MediaItem[]   @relation("MediaUploader")
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// Story model for recovery stories
+model Story {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  name        String   // Person's name
+  age         Int
+  type        StoryType
+  category    String
+  excerpt     String   
+  content     String?  
+  image       String
+  videoUrl    String?
+  audioUrl    String?
+  duration    String?
+  featured    Boolean  @default(false)
+  published   Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  authorId    String
+  author      User     @relation("StoryAuthor", fields: [authorId], references: [id])
+  
+  @@map("stories")
+  @@index([slug])
+  @@index([featured])
+  @@index([published])
+}
+
+enum StoryType {
+  VIDEO
+  AUDIO
+  TEXT
+}
+
+// NewsArticle model for news and updates
+model NewsArticle {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  excerpt     String      
+  content     String      
+  category    NewsCategory
+  image       String
+  readTime    String
+  featured    Boolean     @default(false)
+  published   Boolean     @default(false)
+  publishedAt DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relations
+  authorId    String
+  author      User        @relation("NewsAuthor", fields: [authorId], references: [id])
+  tags        Tag[]       @relation("NewsArticleTags")
+  
+  @@map("news_articles")
+  @@index([slug])
+  @@index([category])
+  @@index([featured])
+  @@index([published])
+}
+
+enum NewsCategory {
+  RESEARCH
+  ANNOUNCEMENTS
+  EVENTS
+  POLICY
+  COMMUNITY
+  SUCCESS_STORIES
+  PREVENTION
+  TREATMENT
+}
+
+// Event model for events and programs
+model Event {
+  id                  String      @id @default(cuid())
+  title               String
+  slug                String      @unique
+  description         String      
+  type                EventType
+  date                DateTime
+  time                String
+  endTime             String?
+  location            String
+  address             String?
+  virtualLink         String?
+  attendees           Int         @default(0)
+  maxAttendees        Int?
+  image               String
+  organizer           String
+  contactEmail        String?
+  contactPhone        String?
+  featured            Boolean     @default(false)
+  published           Boolean     @default(false)
+  registrationRequired Boolean    @default(true)
+  registrationUrl     String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organizerId String
+  organizerUser User   @relation("EventOrganizer", fields: [organizerId], references: [id])
+  tags        Tag[]   @relation("EventTags")
+  rsvps       RSVP[]
+  
+  @@map("events")
+  @@index([slug])
+  @@index([date])
+  @@index([type])
+  @@index([featured])
+  @@index([published])
+}
+
+enum EventType {
+  COMMUNITY_EVENT
+  SUPPORT_GROUP
+  EDUCATION
+  FUNDRAISER
+  WORKSHOP
+  CONFERENCE
+  WEBINAR
+}
+
+// RSVP model for event registrations
+model RSVP {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String?
+  message   String?  
+  createdAt DateTime @default(now())
+  
+  @@map("rsvps")
+  @@unique([eventId, email])
+  @@index([eventId])
+}
+
+// Resource model for educational materials and support resources
+model Resource {
+  id          String         @id @default(cuid())
+  title       String
+  slug        String         @unique
+  description String         
+  category    ResourceCategory
+  type        ResourceType
+  url         String?
+  fileUrl     String?
+  image       String?
+  featured    Boolean        @default(false)
+  published   Boolean        @default(false)
+  downloads   Int            @default(0)
+  views       Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  // Relations
+  creatorId   String
+  creator     User           @relation("ResourceCreator", fields: [creatorId], references: [id])
+  tags        Tag[]          @relation("ResourceTags")
+  
+  @@map("resources")
+  @@index([slug])
+  @@index([category])
+  @@index([featured])
+  @@index([published])
+}
+
+enum ResourceCategory {
+  HELPLINES
+  TREATMENT
+  SUPPORT_GROUPS
+  EDUCATION
+  RECOVERY
+  FAMILY
+  PROFESSIONAL
+  PREVENTION
+}
+
+enum ResourceType {
+  PDF
+  VIDEO
+  AUDIO
+  ARTICLE
+  EXTERNAL_LINK
+  TOOL
+  INFOGRAPHIC
+}
+
+// MediaItem model for uploaded media files
+model MediaItem {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  alt          String?
+  caption      String?  
+  width        Int?
+  height       Int?
+  createdAt    DateTime @default(now())
+  
+  // Relations
+  uploadedById String
+  uploadedBy   User     @relation("MediaUploader", fields: [uploadedById], references: [id])
+  tags         Tag[]    @relation("MediaItemTags")
+  
+  @@map("media_items")
+  @@index([mimeType])
+}
+
+// Tag model for categorizing content
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  
+  // Relations
+  newsArticles NewsArticle[] @relation("NewsArticleTags")
+  events       Event[]       @relation("EventTags")
+  resources    Resource[]    @relation("ResourceTags")
+  mediaItems   MediaItem[]   @relation("MediaItemTags")
+  
+  @@map("tags")
+  @@index([slug])
+}
+
+// ContactMessage model for contact form submissions
+model ContactMessage {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  subject   String
+  message   String   
+  newsletter Boolean @default(false)
+  status    MessageStatus @default(UNREAD)
+  createdAt DateTime @default(now())
+  
+  @@map("contact_messages")
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum MessageStatus {
+  UNREAD
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+// NewsletterSubscriber model for newsletter signups
+model NewsletterSubscriber {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  active      Boolean  @default(true)
+  confirmedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("newsletter_subscribers")
+  @@index([active])
+}
